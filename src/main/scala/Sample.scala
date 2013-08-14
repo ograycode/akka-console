@@ -1,4 +1,4 @@
-package main
+package akka.cluster
 
 import language._
 import scala.concurrent.duration._
@@ -68,13 +68,23 @@ class ClusterConsole extends Actor {
       eventDebugLog(new Logging.Debug(logSource, logClass, message))
   }
 
-  def eventErrorLog(log: Logging.Error) = { defaultLog(log) }
 
-  def eventWarningLog(log: Logging.Warning) = { defaultLog(log) }
+  val clusterView = cluster.readView
 
-  def eventInfoLog(log: Logging.Info) = { defaultLog(log) }
+  def getMembers = clusterView.members.toSeq
+  def getUnreachableMembers = clusterView.unreachableMembers.toSeq
+  def getLeader = clusterView.leader
+  def isSingletonCluster = clusterView.isSingletonCluster
+  def isClusterAvailable = clusterView.isAvailable
 
-  def eventDebugLog(log: Logging.Debug) = { defaultLog(log) }
+
+  def eventErrorLog(log: Logging.Error) = defaultLog(log)
+
+  def eventWarningLog(log: Logging.Warning) = defaultLog(log)
+
+  def eventInfoLog(log: Logging.Info) = defaultLog(log)
+
+  def eventDebugLog(log: Logging.Debug) = defaultLog(log)
 
   def defaultLog(log: LogEvent) = {
     println("============================")
