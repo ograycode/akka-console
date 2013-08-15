@@ -9,8 +9,15 @@ import akka.pattern._
 import akka.util._
 import akka.event._
 import akka.event.Logging._
+import akka.io._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent._
+import spray.can._
+import spray.can.server._
+import spray.util._
+import spray.http._
+import HttpMethods._
+import MediaTypes._
 
 //#messages
 case class TransformationJob(text: String)
@@ -25,27 +32,19 @@ object ConsoleSample {
     val config =
       (if (args.nonEmpty) ConfigFactory.parseString(s"akka.remote.netty.tcp.port=${args(0)}")
       else ConfigFactory.empty).withFallback(
-        ConfigFactory.parseString("akka.cluster.roles = [frontend]")).
+        ConfigFactory.parseString("akka.cluster.roles = [console]")).
         withFallback(ConfigFactory.load())
 
     val system = ActorSystem("ClusterSystem", config)
     val console = system.actorOf(Props[ClusterConsole], name = "console")
-    val frontend = system.actorOf(Props[TransformationFrontend], name = "frontend")
-
-    import system.dispatcher
-    implicit val timeout = Timeout(5 seconds)
-    for (n <- 1 to 120) {
-      (frontend ? TransformationJob("hello-" + n)) onSuccess {
-        case result => println(result)
-      }
-      // wait a while until next request,
-      // to avoid flooding the console with output
-      Thread.sleep(2000)
-    }
   }
 }
 
 class ClusterConsole extends Actor {
+
+  implicit val actSystem = context.system
+  akka.io.IO(Http) ! Http.Bind(self, interface = "localhost", port = 8080)
+
   val cluster = Cluster(context.system)
 
   override def preStart(): Unit = {
@@ -56,7 +55,20 @@ class ClusterConsole extends Actor {
     context.system.eventStream.unsubscribe(self)
   }
 
-  def receive = {
+  def index(isAvailable: Boolean) = HttpResponse(
+    entity = HttpEntity(`text/html`,
+      <html>
+        <body>
+          <h1>Hello Worlds! {isAvailable}</h1>
+        </body>
+      </html>.toString()
+    )
+  )
+
+  def receive = {    
+    case _: Http.Connected => sender ! Http.Register(self)
+    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
+      sender ! index(isClusterAvailable)
     case InitializeLogger(_) => sender ! LoggerInitialized
     case Error(cause, logSource, logClass, message) => 
       eventErrorLog(new Logging.Error(cause, logSource, logClass, message))
