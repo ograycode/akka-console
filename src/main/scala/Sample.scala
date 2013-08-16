@@ -65,7 +65,13 @@ class ClusterConsole extends Actor {
     entity = HttpEntity(`text/html`,
       <html>
         <body>
-          <h1>Hello Worlds! {info.isAvailable}</h1>
+          <h1>Cluster Status</h1>
+          <ul>
+            <li>Is available: {info.isAvailable}</li>
+            <li>Leader: {info.leader.toString}</li>
+            <li>Is singleton cluster: {info.isSingletonCluster}</li>
+            <li>Members: {info.members.size}</li>
+          </ul>
         </body>
       </html>.toString()
     )
