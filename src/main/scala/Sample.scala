@@ -40,6 +40,12 @@ object ConsoleSample {
   }
 }
 
+class ClusterInformation (val isAvailable: Boolean, 
+  val isSingletonCluster: Boolean, 
+  val leader: Option[Address],
+  val members: Seq[Member],
+  val unreachableMembers: Seq[Member])
+
 class ClusterConsole extends Actor {
 
   implicit val actSystem = context.system
@@ -55,11 +61,11 @@ class ClusterConsole extends Actor {
     context.system.eventStream.unsubscribe(self)
   }
 
-  def index(isAvailable: Boolean) = HttpResponse(
+  def index(info: ClusterInformation) = HttpResponse(
     entity = HttpEntity(`text/html`,
       <html>
         <body>
-          <h1>Hello Worlds! {isAvailable}</h1>
+          <h1>Hello Worlds! {info.isAvailable}</h1>
         </body>
       </html>.toString()
     )
@@ -68,7 +74,7 @@ class ClusterConsole extends Actor {
   def receive = {    
     case _: Http.Connected => sender ! Http.Register(self)
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      sender ! index(isClusterAvailable)
+      sender ! index(new ClusterInformation(isClusterAvailable, isSingletonCluster, getLeader, getMembers, getUnreachableMembers))
     case InitializeLogger(_) => sender ! LoggerInitialized
     case Error(cause, logSource, logClass, message) => 
       eventErrorLog(new Logging.Error(cause, logSource, logClass, message))
