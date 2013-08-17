@@ -70,7 +70,24 @@ class ClusterConsole extends Actor {
             <li>Is available: {info.isAvailable}</li>
             <li>Leader: {info.leader.toString}</li>
             <li>Is singleton cluster: {info.isSingletonCluster}</li>
-            <li>Members: {info.members.size}</li>
+            <li>Members: {info.members.size}
+              <ul>
+                {
+                  var output: String = ""
+                  info.members.foreach {member => output += "<li>" + member.toString + "</li>"}
+                  scala.xml.Unparsed(output)
+                }
+              </ul>
+            </li>
+            <li> Unreachable members: {info.unreachableMembers.size}
+              <ul>
+                {
+                  var output: String = ""
+                  info.unreachableMembers.foreach {member => output += "<li>" + member.toString + "</li>"}
+                  scala.xml.Unparsed(output)
+                }
+              </ul>
+            </li>
           </ul>
         </body>
       </html>.toString()
