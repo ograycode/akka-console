@@ -41,13 +41,6 @@ object ConsoleSample {
   }
 }
 
-class ClusterInformation (val isAvailable: Boolean, 
-  val isSingletonCluster: Boolean, 
-  val leader: Option[Address],
-  val members: Seq[Member],
-  val unreachableMembers: Seq[Member],
-  val logs: Seq[LogEvent])
-
 class ClusterConsole extends Actor {
 
   implicit val actSystem = context.system
@@ -63,6 +56,13 @@ class ClusterConsole extends Actor {
   override def postStop(): Unit =  {
     context.system.eventStream.unsubscribe(self)
   }
+
+  class ClusterInformation (val isAvailable: Boolean, 
+    val isSingletonCluster: Boolean, 
+    val leader: Option[Address],
+    val members: Seq[Member],
+    val unreachableMembers: Seq[Member],
+    val logs: Seq[LogEvent])
 
   def index(info: ClusterInformation) = HttpResponse(
     entity = HttpEntity(`text/html`,
