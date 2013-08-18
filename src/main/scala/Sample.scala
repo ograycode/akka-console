@@ -2,6 +2,7 @@ package akka.cluster
 
 import language._
 import scala.concurrent.duration._
+import scala.collection.mutable.ListBuffer
 import akka.actor._
 import akka.cluster._
 import akka.cluster.ClusterEvent._
@@ -44,7 +45,8 @@ class ClusterInformation (val isAvailable: Boolean,
   val isSingletonCluster: Boolean, 
   val leader: Option[Address],
   val members: Seq[Member],
-  val unreachableMembers: Seq[Member])
+  val unreachableMembers: Seq[Member],
+  val logs: Seq[LogEvent])
 
 class ClusterConsole extends Actor {
 
@@ -52,6 +54,7 @@ class ClusterConsole extends Actor {
   akka.io.IO(Http) ! Http.Bind(self, interface = "localhost", port = 8080)
 
   val cluster = Cluster(context.system)
+  var logs = new ListBuffer[LogEvent]()
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[Logging.LogEvent])
@@ -72,20 +75,17 @@ class ClusterConsole extends Actor {
             <li>Is singleton cluster: {info.isSingletonCluster}</li>
             <li>Members: {info.members.size}
               <ul>
-                {
-                  var output: String = ""
-                  info.members.foreach {member => output += "<li>" + member.toString + "</li>"}
-                  scala.xml.Unparsed(output)
-                }
+                {formatToHtml("<li>", info.members, "</li>")}
               </ul>
             </li>
             <li> Unreachable members: {info.unreachableMembers.size}
               <ul>
-                {
-                  var output: String = ""
-                  info.unreachableMembers.foreach {member => output += "<li>" + member.toString + "</li>"}
-                  scala.xml.Unparsed(output)
-                }
+                {formatToHtml("<li>", info.unreachableMembers, "</li>")}
+              </ul>
+            </li>
+            <li>Logs: {info.logs.size}
+              <ul>
+                {formatToHtml("<li>", info.logs, "</li>")}
               </ul>
             </li>
           </ul>
@@ -94,10 +94,16 @@ class ClusterConsole extends Actor {
     )
   )
 
+  def formatToHtml(first: String, items: Seq[_], last: String) = {
+    var output: String = ""
+    items.foreach { item => output += first + item.toString + last}
+    scala.xml.Unparsed(output)
+  }
+
   def receive = {    
     case _: Http.Connected => sender ! Http.Register(self)
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      sender ! index(new ClusterInformation(isClusterAvailable, isSingletonCluster, getLeader, getMembers, getUnreachableMembers))
+      sender ! index(new ClusterInformation(isClusterAvailable, isSingletonCluster, getLeader, getMembers, getUnreachableMembers, logs.reverse.toSeq))
     case InitializeLogger(_) => sender ! LoggerInitialized
     case Error(cause, logSource, logClass, message) => 
       eventErrorLog(new Logging.Error(cause, logSource, logClass, message))
@@ -128,6 +134,7 @@ class ClusterConsole extends Actor {
   def eventDebugLog(log: Logging.Debug) = defaultLog(log)
 
   def defaultLog(log: LogEvent) = {
+    logs.append(log)
     println("============================")
     println(log.toString)
     println("============================")
