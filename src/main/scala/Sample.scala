@@ -1,4 +1,4 @@
-package akka.cluster
+package sample
 
 import language._
 import scala.concurrent.duration._
@@ -37,113 +37,11 @@ object ConsoleSample {
         withFallback(ConfigFactory.load())
 
     val system = ActorSystem("ClusterSystem", config)
-    val console = system.actorOf(Props[ClusterConsole], name = "console")
+    val console = system.actorOf(Props[Manager], name = "console")
   }
 }
 
-class ClusterConsole extends Actor {
-
-  implicit val actSystem = context.system
-  akka.io.IO(Http) ! Http.Bind(self, interface = "localhost", port = 8080)
-
-  val cluster = Cluster(context.system)
-  var logs = new ListBuffer[LogEvent]()
-
-  override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[Logging.LogEvent])
-    cluster.subscribe(self, classOf[ClusterDomainEvent])
-  }
-  override def postStop(): Unit =  {
-    context.system.eventStream.unsubscribe(self)
-  }
-
-  class ClusterInformation (val isAvailable: Boolean, 
-    val isSingletonCluster: Boolean, 
-    val leader: Option[Address],
-    val members: Seq[Member],
-    val unreachableMembers: Seq[Member],
-    val logs: Seq[LogEvent])
-
-  def index(info: ClusterInformation) = HttpResponse(
-    entity = HttpEntity(`text/html`,
-      <html>
-        <body>
-          <h1>Cluster Status</h1>
-          <ul>
-            <li>Is available: {info.isAvailable}</li>
-            <li>Leader: {info.leader.toString}</li>
-            <li>Is singleton cluster: {info.isSingletonCluster}</li>
-            <li>Members: {info.members.size}
-              <ul>
-                {formatToHtml("<li>", info.members, "</li>")}
-              </ul>
-            </li>
-            <li> Unreachable members: {info.unreachableMembers.size}
-              <ul>
-                {formatToHtml("<li>", info.unreachableMembers, "</li>")}
-              </ul>
-            </li>
-            <li>Logs: {info.logs.size}
-              <ul>
-                {formatToHtml("<li>", info.logs, "</li>")}
-              </ul>
-            </li>
-          </ul>
-        </body>
-      </html>.toString()
-    )
-  )
-
-  def formatToHtml(first: String, items: Seq[_], last: String) = {
-    var output: String = ""
-    items.foreach { item => output += first + item.toString + last}
-    scala.xml.Unparsed(output)
-  }
-
-  def receive = {    
-    case _: Http.Connected => sender ! Http.Register(self)
-    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      sender ! index(new ClusterInformation(isClusterAvailable, isSingletonCluster, getLeader, getMembers, getUnreachableMembers, logs.reverse.toSeq))
-    case InitializeLogger(_) => sender ! LoggerInitialized
-    case Error(cause, logSource, logClass, message) => 
-      eventErrorLog(new Logging.Error(cause, logSource, logClass, message))
-    case Warning(logSource, logClass, message) => 
-      eventWarningLog(new Logging.Warning(logSource, logClass, message))
-    case Info(logSource, logClass, message) => 
-      eventInfoLog(new Logging.Info(logSource, logClass, message))
-    case Debug(logSource, logClass, message) => 
-      eventDebugLog(new Logging.Debug(logSource, logClass, message))
-  }
-
-
-  val clusterView = cluster.readView
-
-  def getMembers = clusterView.members.toSeq
-  def getUnreachableMembers = clusterView.unreachableMembers.toSeq
-  def getLeader = clusterView.leader
-  def isSingletonCluster = clusterView.isSingletonCluster
-  def isClusterAvailable = clusterView.isAvailable
-
-
-  def eventErrorLog(log: Logging.Error) = defaultLog(log)
-
-  def eventWarningLog(log: Logging.Warning) = defaultLog(log)
-
-  def eventInfoLog(log: Logging.Info) = defaultLog(log)
-
-  def eventDebugLog(log: Logging.Debug) = defaultLog(log)
-
-  def defaultLog(log: LogEvent) = {
-    logs.append(log)
-    println("============================")
-    println(log.toString)
-    println("============================")
-  }
-
-  
-
-  def createActor(actorName: String) = {}
-}
+class Manager extends ClusterConsole
 
 object TransformationFrontend {
   def main(args: Array[String]): Unit = {
