@@ -20,7 +20,11 @@ import spray.http._
 import HttpMethods._
 import MediaTypes._
 
-
+/**
+ * Starts the console for clusters
+ * Extend this class to implement
+ * custom behavoir or call it itself.
+ */
 class ClusterConsole extends Actor {
 
   //Set up the webservice that will display the console
@@ -109,19 +113,26 @@ class ClusterConsole extends Actor {
 
   val clusterView = cluster.readView
 
+  //Gets clusters information
   def getMembers = clusterView.members.toSeq
   def getUnreachableMembers = clusterView.unreachableMembers.toSeq
   def getLeader = clusterView.leader
   def isSingletonCluster = clusterView.isSingletonCluster
   def isClusterAvailable = clusterView.isAvailable
 
-
+  //Handles logs
   def eventErrorLog(log: Logging.Error) = defaultLog(log)
   def eventWarningLog(log: Logging.Warning) = defaultLog(log)
   def eventInfoLog(log: Logging.Info) = defaultLog(log)
   def eventDebugLog(log: Logging.Debug) = defaultLog(log)
 
+  //Default log handling
   def defaultLog(log: LogEvent) = logs.append(log)
 
+  /**
+   * Used to create actors based upon a string input.
+   * Override this method in order to create the actors
+   * NOTE: Not yet implemented
+   */
   def createActor(actorName: String) = {}
 }
