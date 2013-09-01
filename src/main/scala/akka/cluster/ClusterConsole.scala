@@ -60,22 +60,22 @@ class ClusterConsole extends Actor {
         <body>
           <h1>Cluster Status</h1>
           <ul>
-            <li>Is available: {info.isAvailable}</li>
-            <li>Leader: {info.leader.toString}</li>
-            <li>Is singleton cluster: {info.isSingletonCluster}</li>
+            <li>Is available: { info.isAvailable }</li>
+            <li>Leader: { info.leader.toString }</li>
+            <li>Is singleton cluster: { info.isSingletonCluster }</li>
             <li>Members: {info.members.size}
               <ul>
-                {formatToHtml("<li>", info.members, "</li>")}
+                { formatToHtml("<li>", info.members, "</li>") }
               </ul>
             </li>
-            <li> Unreachable members: {info.unreachableMembers.size}
+            <li> Unreachable members: { info.unreachableMembers.size }
               <ul>
                 {formatToHtml("<li>", info.unreachableMembers, "</li>")}
               </ul>
             </li>
             <li>Logs: {info.logs.size}
               <ul>
-                {formatToHtml("<li>", info.logs, "</li>")}
+                { formatToHtml("<li>", info.logs, "</li>") }
               </ul>
             </li>
           </ul>
@@ -87,7 +87,7 @@ class ClusterConsole extends Actor {
   //format a basic Seq
   def formatToHtml(first: String, items: Seq[_], last: String) = {
     var output: String = ""
-    items.foreach { item => output += first + item.toString + last}
+    items.foreach { item => output += first + item.toString + last }
     scala.xml.Unparsed(output)
   }
 
